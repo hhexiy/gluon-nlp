@@ -57,9 +57,11 @@ setup(
             'nltk==3.2.5',
             'scipy',
             'numba',
+            'jieba',
         ],
         'dev': [
             'pytest',
+            'pytest-datadir',
             'recommonmark',
             'sphinx-gallery',
             'sphinx_rtd_theme',

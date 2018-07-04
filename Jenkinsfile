@@ -3,6 +3,7 @@ stage("Sanity Check") {
     ws('workspace/gluon-nlp-lint') {
       checkout scm
       sh """#!/bin/bash
+      git clean -f -d -x --exclude='tests/externaldata/*'
       conda env update --prune -f env/pylint.yml
       source activate gluon_nlp_pylint
       conda list
@@ -19,6 +20,7 @@ stage("Unit Test") {
       ws('workspace/gluon-nlp-py2') {
         checkout scm
         sh """#!/bin/bash
+        git clean -f -d -x --exclude='tests/externaldata/*'
         conda env update --prune -f env/py2.yml
         source activate gluon_nlp_py2
         conda list
@@ -33,18 +35,24 @@ stage("Unit Test") {
   },
   'Python 3': {
     node {
-      ws('workspace/gluon-nlp-py3') {
-        checkout scm
-        sh """#!/bin/bash
-        conda env update --prune -f env/py3.yml
-        source activate gluon_nlp_py3
-        conda list
-        python -m spacy download en
-        python -m nltk.downloader all
-        make clean
-        python setup.py install
-        py.test -v --capture=no --durations=0 --cov=gluonnlp --cov=scripts tests/unittest scripts
-        """
+      withCredentials([string(credentialsId: 'GluonNLPCodeCov', variable: 'CODECOV_TOKEN')]) {
+        ws('workspace/gluon-nlp-py3') {
+          checkout scm
+          sh """#!/bin/bash
+          git clean -f -d -x --exclude='tests/externaldata/*'
+          conda env update --prune -f env/py3.yml
+          source activate gluon_nlp_py3
+          conda list
+          python -m spacy download en
+          python -m nltk.downloader all
+          make clean
+          python setup.py install
+          py.test -v --capture=no --durations=0 --cov=gluonnlp --cov=scripts tests/unittest scripts
+          EXIT_STATUS=\$?
+          bash ./codecov.sh
+          exit \$EXIT_STATUS
+          """
+        }
       }
     }
   }
@@ -55,7 +63,10 @@ stage("Deploy") {
     ws('workspace/gluon-nlp-docs') {
       checkout scm
       sh """#!/bin/bash
+      git clean -f -d -x --exclude='tests/externaldata/*'
       conda env update --prune -f env/doc.yml
+      conda remove -n gluon_nlp_docs pandoc --force
+      conda install -n gluon_nlp_docs pandoc --force
       source activate gluon_nlp_docs
       conda list
       python setup.py install
