@@ -191,7 +191,7 @@ class _SamplingStepUpdate(HybridBlock):
         assert eos_id >= 0, 'eos_id cannot be negative! Received eos_id={}'.format(eos_id)
 
     def hybrid_forward(self, F, samples, valid_length, outputs, scores, step, beam_alive_mask,   # pylint: disable=arguments-differ
-                       states, state_info, vocab_num, batch_shift):
+                       states, vocab_num, batch_shift):
         """
 
         Parameters
@@ -240,7 +240,7 @@ class _SamplingStepUpdate(HybridBlock):
         # outputs: (batch_size, beam_size, vocab_size)
         outputs = outputs.reshape(shape=(-4, -1, beam_size, 0))
         probs = (outputs / self._temperature).softmax(axis=2)
-        chosen_word_ids, _ = mx.ndarray.sample_multinomial(probs, get_prob=True)
+        chosen_word_ids, _ = F.sample_multinomial(probs, get_prob=True)
         chosen_word_ids = chosen_word_ids.astype('float32')  # (batch_size, beam_size)
         log_probs = F.log_softmax(outputs, axis=2).reshape(-3, -1)
         chosen_word_log_probs = log_probs[mx.nd.arange(log_probs.shape[0]),
@@ -404,7 +404,7 @@ class BeamSearchSampler(object):
         else:
             self._updater = _BeamSearchStepUpdate(beam_size=beam_size, eos_id=eos_id, scorer=scorer,
                                               state_info=state_info)
-        self._updater.hybridize()
+        #self._updater.hybridize()
 
     def __call__(self, inputs, states):
         """Sample by beam search.
